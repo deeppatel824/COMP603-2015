@@ -1,1 +1,17 @@
 LAB 1
+
+Deep Patel
+
+1. Chosen Compiler: Tiny C Compiler
+
+Scan/Lexical/Tokenize: win32/include/winapi/wincon.h has the scan funstion. TCC.h has the fucktion for token. 
+
+Parse: tccpp.c and tccasm.c has the function for parse.
+
+AST (Abstract Syntax Tree): configure file has the function of building tree. I also found stack pointer on examples/ex2.c which is similar to tree.
+
+Optimization: It is contained in x86_64-gen.c 
+Code generation:
+
+something interesting: TCC is designed to work for slow computers with little 
+disk space.
