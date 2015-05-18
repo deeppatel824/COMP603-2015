@@ -1,6 +1,5 @@
 What does it mean for two sets to be disjoint?
-
-
+-If two sets are disjoint they are not sharing anything similar.
 
 What is the union of two sets?
-
+- the union of two sets means that there are few things similar in 2 diffenret sets. The connection between two circles.
