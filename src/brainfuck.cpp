@@ -18,7 +18,7 @@ using namespace std;
 /**
  * Primitive Brainfuck commands
  */
-typedef enum { 
+typedef enum {
     INCREMENT, // +
     DECREMENT, // -
     SHIFT_LEFT, // <
@@ -107,6 +107,28 @@ class Program : public Container {
  */
 void parse(fstream & file, Container * container) {
     char c;
+	file >> c;
+
+    if (c=='+' || c=='-' || c=='<' || c=='>' || c== ',' || c=='.')
+	{
+    container->children.push_back(new CommandNode(c));
+	}
+    c = (char)file.peek();
+
+	if(c=='[')
+	{
+		Loop my_loop;
+		parse(file, & my_loop);
+		container->children.push_back(new Loop(my_loop));
+		file >> c;
+	}
+
+	c=(char)file.peek();
+	if(c=='+' || c=='-' || c=='<' || c=='>' || c== ',' || c=='.')
+	{
+		parse(file, container);
+	}
+    /*char c;
     // How to peek at the next character
     c = (char)file.peek();
     // How to print out that character
@@ -116,7 +138,7 @@ void parse(fstream & file, Container * container) {
     // How to print out that character
     cout << c;
     // How to insert a node into the container.
-    container->children.push_back(new CommandNode(c));
+    container->children.push_back(new CommandNode(c));*/
 }
 
 /**
@@ -124,6 +146,7 @@ void parse(fstream & file, Container * container) {
  * As a visitor, it will just print out the commands as is.
  * For Loops and the root Program node, it walks trough all the children.
  */
+
 class Printer : public Visitor {
     public:
         void visit(const CommandNode * leaf) {
@@ -134,8 +157,9 @@ class Printer : public Visitor {
                 case SHIFT_RIGHT: cout << '>'; break;
                 case INPUT:       cout << ','; break;
                 case OUTPUT:      cout << '.'; break;
-            }
+           }
         }
+
         void visit(const Loop * loop) {
             cout << '[';
             for (vector<Node*>::const_iterator it = loop->children.begin(); it != loop->children.end(); ++it) {
@@ -146,42 +170,8 @@ class Printer : public Visitor {
         void visit(const Program * program) {
             for (vector<Node*>::const_iterator it = program->children.begin(); it != program->children.end(); ++it) {
                 (*it)->accept(this);
-            }
+           }
             cout << '\n';
-        }
-};
-
-class Interpreter : public Visitor {
-    char memory[30000];
-    int pointer;
-    public:
-        void visit(const CommandNode * leaf) {
-            switch (leaf->command) {
-                case INCREMENT:
-                    break;
-                case DECREMENT:
-                    break;
-                case SHIFT_LEFT:
-                    break;
-                case SHIFT_RIGHT:
-                    break;
-                case INPUT:
-                    break;
-                case OUTPUT:
-                    break;
-            }
-        }
-        void visit(const Loop * loop) {
-            for (vector<Node*>::const_iterator it = loop->children.begin(); it != loop->children.end(); ++it) {
-                (*it)->accept(this);
-            }
-        }
-        void visit(const Program * program) {
-            // zero init the memory array
-            // set pointer to zero
-            for (vector<Node*>::const_iterator it = program->children.begin(); it != program->children.end(); ++it) {
-                (*it)->accept(this);
-            }
         }
 };
 
@@ -189,15 +179,13 @@ int main(int argc, char *argv[]) {
     fstream file;
     Program program;
     Printer printer;
-    Interpreter interpreter;
     if (argc == 1) {
         cout << argv[0] << ": No input files." << endl;
     } else if (argc > 1) {
         for (int i = 1; i < argc; i++) {
             file.open(argv[i], fstream::in);
             parse(file, & program);
-//            program.accept(&printer);
-            program.accept(&interpreter);
+            program.accept(&printer);
             file.close();
         }
     }
