@@ -1,12 +1,6 @@
-/*
-= Brainfuck
-
-If you have gcc:
-
-----
-g++ -o brainfuck.exe brainfuck.cpp
-brainfuck.exe helloworld.bf
-----
+ /*
+Deep Patel
+6/13/2015
 */
 
 #include <vector>
@@ -58,7 +52,8 @@ class Node {
 class CommandNode : public Node {
     public:
         Command command;
-        CommandNode(char c) {
+		int count;
+        CommandNode(char c, int n) {
             switch(c) {
                 case '+': command = INCREMENT; break;
                 case '-': command = DECREMENT; break;
@@ -67,6 +62,7 @@ class CommandNode : public Node {
                 case ',': command = INPUT; break;
                 case '.': command = OUTPUT; break;
             }
+			count = n;
         }
         void accept (Visitor * v) {
             v->visit(this);
@@ -106,39 +102,51 @@ class Program : public Container {
  * Modify as necessary and add whatever functions you need to get things done.
  */
 void parse(fstream & file, Container * container) {
-    char c;
-	file >> c;
+	Loop * program; //loop object
+	char next;
+	char temp;
+	int count;
 
-    if (c=='+' || c=='-' || c=='<' || c=='>' || c== ',' || c=='.')
+	while (file >> next)
 	{
-    container->children.push_back(new CommandNode(c));
-	}
-    c = (char)file.peek();
+		count = 1;
 
-	if(c=='[')
-	{
-		Loop my_loop;
-		parse(file, & my_loop);
-		container->children.push_back(new Loop(my_loop));
-		file >> c;
+		if (next == '+' || next == '-' || next == '<' || next == '>' || next == ',' || next == '.')
+		{
+			while (((char)file.peek()) == next)
+				{
+					file >> next;
+					count++;
+				}
+			container->children.push_back (new CommandNode(next, count));
+		}
+		else if (next == '[')
+		{
+			program = new Loop(); //new loop object
+			parse (file, program); //parse inside program
+			if (program->children.size() == 1)
+			{
+				CommandNode* child = dynamic_cast<CommandNode*>(program->children.front());
+				if (child->command == INCREMENT || child->command == DECREMENT)
+				{
+					container->children.push_back(new CommandNode('z',1));
+					delete program;
+				}
+				else
+				{
+					container->children.push_back(program);
+				}
+			}
+			else
+			{
+				container->children.push_back(program);
+			}
+		}
+		else if (next == ']')
+		{
+			return;
+		}
 	}
-
-	c=(char)file.peek();
-	if(c=='+' || c=='-' || c=='<' || c=='>' || c== ',' || c=='.')
-	{
-		parse(file, container);
-	}
-    /*char c;
-    // How to peek at the next character
-    c = (char)file.peek();
-    // How to print out that character
-    cout << c;
-    // How to read a character from the file and advance to the next character
-    file >> c;
-    // How to print out that character
-    cout << c;
-    // How to insert a node into the container.
-    container->children.push_back(new CommandNode(c));*/
 }
 
 /**
@@ -146,32 +154,118 @@ void parse(fstream & file, Container * container) {
  * As a visitor, it will just print out the commands as is.
  * For Loops and the root Program node, it walks trough all the children.
  */
-
 class Printer : public Visitor {
     public:
         void visit(const CommandNode * leaf) {
-            switch (leaf->command) {
-                case INCREMENT:   cout << '+'; break;
-                case DECREMENT:   cout << '-'; break;
-                case SHIFT_LEFT:  cout << '<'; break;
-                case SHIFT_RIGHT: cout << '>'; break;
-                case INPUT:       cout << ','; break;
-                case OUTPUT:      cout << '.'; break;
-           }
-        }
 
-        void visit(const Loop * loop) {
+			for (int i = 0; i < leaf->count; i++)
+			{
+				switch (leaf->command) {
+					case INCREMENT:   cout << '+'; break;
+					case DECREMENT:   cout << '-'; break;
+					case SHIFT_LEFT:  cout << '<'; break;
+					case SHIFT_RIGHT: cout << '>'; break;
+					case INPUT:       cout << ','; break;
+					case OUTPUT:      cout << '.'; break;
+				}
+			}
+        }
+        void visit(const Loop * loop)
+        {
             cout << '[';
             for (vector<Node*>::const_iterator it = loop->children.begin(); it != loop->children.end(); ++it) {
                 (*it)->accept(this);
             }
             cout << ']';
         }
+        void visit(const Program * program)
+        {
+            for (vector<Node*>::const_iterator it = program->children.begin(); it != program->children.end(); ++it) {
+                (*it)->accept(this);
+            }
+            cout << '\n';
+        }
+};
+
+/**
+ *Compiler
+ *
+ */
+class Compiler : public Visitor {
+    public:
+        void visit(const CommandNode * leaf) {
+			for (int i = 0; i < leaf->count; i++)
+			{
+				switch (leaf->command) {
+                    case INCREMENT:   cout << '+'; break;
+                    case DECREMENT:   cout << '-'; break;
+                    case SHIFT_LEFT:  cout << '<'; break;
+                    case SHIFT_RIGHT: cout << '>'; break;
+                    case INPUT:       cout << ','; break;
+                    case OUTPUT:      cout << '.'; break;
+				}
+			}
+        }
+        void visit(const Loop * loop) {
+            cout << '[';
+            for (vector<Node*>::const_iterator it = loop->children.begin(); it != loop->children.end(); ++it) {
+                (*it)->accept(this);
+            }
+			cout << ']';
+        }
         void visit(const Program * program) {
             for (vector<Node*>::const_iterator it = program->children.begin(); it != program->children.end(); ++it) {
                 (*it)->accept(this);
-           }
+            }
             cout << '\n';
+        }
+};
+
+class Interpreter : public Visitor {
+    char memory[30000];
+    int pointer;
+    public:
+        void visit(const CommandNode * leaf) {
+			for (int i = 0; i < leaf->count; i++)
+			{
+					switch (leaf->command) {
+					case INCREMENT:
+						memory [pointer]++;
+						break;
+					case DECREMENT:
+						memory [pointer]--;
+						break;
+					case SHIFT_LEFT:
+						pointer--;
+						break;
+					case SHIFT_RIGHT:
+						pointer++;
+						break;
+					case INPUT:
+						cin.get (memory [pointer]);
+						break;
+					case OUTPUT:
+						cout << memory [pointer];
+						break;
+				}
+			}
+        }
+        void visit(const Loop * loop) {
+			while (memory[pointer]){
+            for (vector<Node*>::const_iterator it = loop->children.begin(); it != loop->children.end(); ++it) {
+                (*it)->accept(this);
+                }
+			}
+        }
+        void visit(const Program * program) {
+			for (int i = 0; i < sizeof (memory) ; i++)
+			{
+				memory[i] = 0;
+			}
+			pointer = 0;
+            for (vector<Node*>::const_iterator it = program->children.begin(); it != program->children.end(); ++it) {
+                (*it)->accept(this);
+            }
         }
 };
 
@@ -179,13 +273,15 @@ int main(int argc, char *argv[]) {
     fstream file;
     Program program;
     Printer printer;
+    Interpreter interpreter;
     if (argc == 1) {
         cout << argv[0] << ": No input files." << endl;
     } else if (argc > 1) {
         for (int i = 1; i < argc; i++) {
             file.open(argv[i], fstream::in);
             parse(file, & program);
-            program.accept(&printer);
+            //program.accept(&printer);
+            program.accept(&interpreter);
             file.close();
         }
     }
